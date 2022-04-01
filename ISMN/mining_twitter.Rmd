@@ -1,0 +1,196 @@
+---
+title: "A Short Twitter-Mining and Network Visualization Tutorial"
+subtitle: "Internet, Social Media and Networks"
+date: "Week 1"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this short tutorial we are going to guide you through downloading Twitter-data, which is relatively easy! One can easily download Twitter-user networks and Tweets containing specific words. However, one must take into account the shortcomings of the Twitter-rest-application-programming-interface (API). For instance, when you try to download a large number of specific hashtags (e.g., #uselections), the API will not actually give you all the tweets that contain this specific word, only a small subsample. Furthermore, you can only do a small number of requests to the API per minute before you exceed the rate limit, which means that you have to carefully think what kind and the size of data you want to download. Finally, the Twitter API only returns tweets from a limited number of past days. 
+
+**NOTE:** Please install [R](https://cran.r-project.org), [RStudio](https://www.rstudio.com/products/rstudio/download/#download) and [Gephi](https://gephi.org/users/download/) on your laptops, since some computer labs will take place in rooms without stationary computers and working on your own laptops (in pairs) will be required. When you are working on university computers and R, RStudio or Gephi are not available, you can easily install both programs on your USB stick and run it from there. 
+
+# Follow these steps during the first computer lab
+
+## Make a Twitter account
+
+If you already have a Twitter-account, you can skip this step. If you do not want to use your regular Twitter-account for this computer lab, you can make a new Twitter-account, where you’ll need to sign up with another e-mail address than the one you use for your regular Tweets.
+
+a. Go to [www.twitter.com](www.twitter.com)
+
+b. Make a new Twitter-account
+
+c. Congratulations, you’re now officially a member of the Twitter community which is over 500 million strong, and more importantly; this is the first step in downloading Twitter-data
+
+## Configure the statistical program R
+
+To download Twitter-data, we are going to work with the statistical package R, which can be considered a more technical version of SPSS (i.e., you can only work with syntax). Don’t worry; we are going to guide you through the process. On [R’s website](https://www.r-project.org/) you can find more information about the program.
+
+a. If you have not installed R yet, please do so via [this](https://cran.r-project.org) link.
+
+b. The default user interface that comes with R is sort of archaic. In this course, we are going to use a nicer-looking and more convenient user interface for R – RStudio. RStudio is separate from R itself (it won’t work without R installed), but it is a much more comfortable way to use R. You can download it [here](https://www.rstudio.com/products/rstudio/download/#download ) (note that you need to have R installed first!).
+
+c. Once you have installed R and RStudio, download the Twitter-mining R-script from blackboard (Blackboard $\rightarrow$  Course Content $\rightarrow$ Seminars/labs $\rightarrow$ Computer Lab 1). Create a folder for the course (e.g. “ISMN” in your C: hard drive, for example at my documents) and move/copy the downloaded R-script there.
+
+d. Open RStudio on your computer. Click the “Open” icon with a yellow folder in the top-left of the screen, find the Twitter-mining R-script you just downloaded and open it. You can also do that by simply double-clicking the R-script, or using CTRL+O keyboard shortcut in RStudio.
+
+e. R is an open-source program (RStudio is just a nicer looking interface for it), that works with packages. Packages are bundles of functions for different purposes, written by regular R users. This means that users can build new functions and add these to the libraries of packages in R. Users that are interested in such packages can in turn download and add them to their R. We are definitely interested in a few packages, since they will help us download some Twitter data!
+
+## Using R in R-studio
+
+First, we will guide you though some basic R-code to give you an idea of how R works within R-studio. To run a command in R, you have to click on the line of the code that you want to run (or select a part of the line, or multiple lines) and then you press Ctrl+Enter, or Cmd + Enter on Mac. If you did so, the result will be visible in the "Console" window below your code.
+
+a. Copy the following lines into your R-script and try it out by running it.
+    
+```{r, echo=TRUE, results='hide'}
+2+2
+print("Hello world!")
+paste("The current date is: ", date(), sep="")
+```
+
+b. When using R, we can make lines "commented". This means that R will not run the lines as code, but as text only. Try to run the following code in your R-script and see what the different in output is when you run it.
+
+```{r, echo=TRUE, results='hide'}
+print("Hello world!")
+#print("Hello world!")
+```
+
+c. Now that you know how to run cammands in R, let's continue. In step 2c, we asked you to create a new folder and save a R-script tehre. We want to let this folder serve as your "wokring directory". A working directory is any folder in your computer, that R will use to save and load files from. We need to point R to the right folder by entering the path of that folder. Use the code below (with your own path filled in) to do so.
+
+    **Example:** if you created a folder directly in your computer's C: disk and it is named ISMN, the path would be `C:\\ISMN`. If you created it elsewhere (e.g. in your Documents) open that folder and copy its path. It would then be something like: `"C:\\Users\\Administrator\\Documents\\ISMN"`.
+    
+    **Note:** Windows and Apple use different slashes
+    
+    Windows   = \\ \\    $\rightarrow$ uses two backslashes between each directory (e.g. C:\\\\ISMN)
+    
+    Mac       = /     $\rightarrow$ uses one forwardslash between each directory (e.g. C:/ISMN)
+    
+    ```{r, eval=FALSE}
+    setwd("YOUR PATH HERE")
+    ```
+
+d. Now we will install some packages. Each of these packages is needed to "teach" R new things (functions) E.g., rtweet is the package that allows us to download Twitter-data. There are a lot different packages that you could install, but for now we install only the packages you see below.
+
+    Copy this to your R-script and run it:
+    
+    ```{r, eval=FALSE}
+    install.packages(c("rtweet", "dplyr", "tibble","haven"))
+    ```
+    
+    
+    *After the packages are installed, put an # before the line so it will not run evey time you run the whole script. The packages are now installed and if you don't delete them, you don't have to install them next time again.*
+
+e. After installation you only need to tell R which packages you want to use (when you use a installed packages in the future, you don't have to install them again. You only have to tell R that you will use it). You ad them to your R-script with the following code. Copy these lines to your R-script and run the lines one by one.
+
+    *You might get an error here about Rtools, but you can ignore it.*
+
+    ```{r, warning = FALSE, message = FALSE}
+    library(rtweet) # For interacting with the Twitter API
+    library(tibble) # making data handling easier
+    library(dplyr)  # Also making data handling easier
+    library(haven)  # For saving data in SPSS format
+    ```
+
+## Downloading Twitter-data
+
+a. Now that we installed and loaded the `RTweet` package, we are able to download Twitter-data. But, we need to first explore some functions of the `RTweet` package that are useful
+
+b.	We can download tweets that mention specific words, which is done with the function:
+
+    ```{r, eval = FALSE}
+    xxxx <- search_tweets("lookupword", n = yyyy)
+    ```
+    
+    This looks messy, but the logic is simple. You are saying: R, please use the search Twitter function, look for tweets that contain “lookupword” I entered, download a maximum number of  “yyyy” tweets and store what you download in an object (or dataset) called “xxxx”, so that I can see it.
+
+c.	When you run the search function (or any other function form the RTweet package) for the first time, it will open a browser window that will ask you to login to Twitter. This is how you “authenticate” with Twitter, and how Twitter gives your permission to download data from the API.
+
+d.	In this way, we can download Tweets containing specific words, but we will also know who made the original Tweet, who retweeted the Tweet, the screennames of users, sometimes the geo-location from where the Tweet is done, the platform (e.g., iPhone) from where the Tweet was done, and some additional information.
+
+e.	Have a look at the documentation for the RTweet package [here](https://www.rdocumentation.org/packages/rtweet) which includes details on each function. Specially, look up the documentation for search_tweets(). Answer the following questions: 
+    
+    i.	How far back in time can you retrieve Tweets with this function?
+    
+    ii.	What do you need to do if you want more than 18,000 tweets in a single search?
+
+f.	For this tutorial we are interested in information surrounding the hashtag `#somethingyouwanthere`. (note: change to something you find interesting.). Let’s keep the number of Tweets below 1000, to save some time. Copy the code below to download the tweets with the hashtag you find interesting. In this example we download tweets with the hashtag `#kerst`.
+
+    ```{r, eval=F}
+    mytweets <- search_tweets(  "#kerst", n = 1000)
+    ```
+
+g. Check whether your data is in your environment in RStudio.
+
+## Cleaning and saving the data
+
+a. Now copy and run the following lines to your R-script in order to change the data a bit. it deletes line breaks in the `text` column of the data so statistical software can read it nicely.
+    
+    ```{r, eval=F}
+    mytweets$text <- gsub("\n", " ", mytweets$text)
+    mytweets$text <- gsub("\r", " ", mytweets$text)
+    mytweets$text <- gsub("\"", "'", mytweets$text)  
+    mytweets$text <- gsub("\t", " ", mytweets$text) 
+    ```
+
+b. Copy and run the following code to your R-script in order to anonymize the usernames of the authors of the tweets by “hashing” them. We do this for privacy reasons: these usernames are considered as personal data, and since we are not interested in them, we shouldn’t store them either. However, usernames of other users may still appear in the tweet texts. When we transform the data to create a network in the next tutorial, we will anonymize those as well.
+
+    ```{r, eval=F}
+    mytweets$screen_name <- openssl::sha1(mytweets$screen_name)
+    mytweets$reply_to_screen_name <- openssl::sha1(mytweets$reply_to_screen_name)
+    ```
+
+c. In order to analyse the data (in anothter statistics program), we need to save it to our computer. First we can make a selection of variables that we want to export. Copy and run this to your R-script.
+
+    ```{r, eval =F}
+    my_export_tweets <- mytweets %>% select(
+      status_id, 
+      screen_name, 
+      text, source, 
+      is_retweet, 
+      reply_to_screen_name,
+      retweet_count
+      )
+    ```
+
+    Now you want to save (write) the data to your computer. You can do this by copying and run the following code. It saves the data as a `.txt` file in the directory you chose earlier.
+    
+    ```{r, eval=F}
+    write.table(flatten(my_export_tweets), "twitter_data.txt", sep = "\t", row.names = FALSE)
+    ```
+    
+    Another option is saving it directly as an `.sav` file, which is a spss datafile.
+    
+    ```{r, eval=F}
+    write_sav(flatten(my_exprt_tweets), "twitter_data.sav")
+    ```
+    
+## Analysing the data
+
+a. Now that we have created a dataset in textual format, open this dataset in SPSS or the statistical software of your choice. Of course, you can also just stay in R.
+
+    **Note:** in SPSS, textual data can be imported using File -> Read text data and following the import wizard. To help you out with which options to choose while importing: your saved data file does not match a predefined format, is Delimited, has variable names at the top, is delimited by “Tabs” and uses double quote for text qualifier. If you pointed SPSS to read the file properly, your SPSS will show the twitter data as a tidy data set. If something goes wrong (e.g. there’s some columns without proper column names) – something is not correct in the options you provided!
+    
+b. **Question** How many Tweets have you downloaded?
+
+c. **Question** How many retweets on average does a Tweet get? 
+
+d. **Question** How many original Tweets have you downloaded? (tip: select only if is_retweet is FALSE)
+
+## Next week
+
+What we will do next week is convert this data set into a network data set. Consider that many tweets that we collected are actually retweets (see variable/column is_retweet, which shows whether a tweet is a retweet). We can see such data as a network – a person who retweets something has a directed connection with the original author. We can call that a Retweet network. Also, those who reply on a Tweet can be seen as having relationships to another user in a “Reply network”, but let us skip the latter network in this tutorial to keep things simple.
+
+**IMPORTANT:** To construct the network data set next week, we will need the data file that you have collected! Save your data (twitter_data.txt in your working directory) on the U-drive. Do not delete it until next week if you are using your laptop. Make sure you have this data for next week.
+
+
+
+
+
+
+
